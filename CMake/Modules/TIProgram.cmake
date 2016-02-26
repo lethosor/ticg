@@ -15,9 +15,11 @@ if("${HEX2BIN}" STREQUAL "HEX2BIN-NOTFOUND")
 endif()
 
 function(ti_program target calcname)
-    add_executable(${target} ${CMAKE_SOURCE_DIR}/c_ti83p/tios_crt0.s ${ARGN})
+    set(c_ti83p ${CMAKE_SOURCE_DIR}/c_ti83p)
+    add_executable(${target} ${c_ti83p}/tios_crt0.s ${c_ti83p}/ti83plus.asm ${ARGN})
+    target_include_directories(${target} PUBLIC ${c_ti83p})
     add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${HEX2BIN} ${target}.ihx
+        COMMAND ${HEX2BIN} -b ${target}.ihx
         COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/depends/binpac8x.py -O ${calcname} ${target}.bin ${target}.8xp
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Converting to binary"
