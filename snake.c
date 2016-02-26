@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "c_ti83p.h"
+#include "draw.h"
 
 #define DIMX 96
 #define DIMY 64
@@ -71,7 +72,7 @@ int main() {
     snake_head_y = DIMY / 2;
     direction = left;
     CClrLCDFull();
-    memset(plotSScreen, 0, BUFFER_SIZE);
+    CDrawRectBorderClearFull();
     key = 0;
     while (key != skClear)
     {
@@ -89,5 +90,6 @@ int main() {
             direction = right; break;
         }
     }
+    CClrLCDFull();
     return 0;
 }

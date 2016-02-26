@@ -14,4 +14,4 @@ set(CMAKE_MODULE_PATH
 
 include(TIProgram)
 
-ti_program(snake snake snake.c c_ti83p/iongraphics.asm)
+ti_program(snake snake snake.c draw.asm c_ti83p/iongraphics.asm)
