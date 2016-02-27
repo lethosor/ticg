@@ -21,10 +21,11 @@ int8_t objects[MAX_OBJECTS * 2];
 enum Direction { up, down, left, right };
 int8_t direction;
 
-#define pixel_on(buf, x, y) buf[y*12 + x/8] |= (1 << (7 - (x & 0x07)))
-#define pixel_off(buf, x, y) buf[y*12 + x/8] &= ~(1 << (7 - (x & 0x07)))
+#define pixel_on(buf, x, y) buf[(y)*12 + (x)/8] |= (0x80 >> ((x) & 0x07))
+#define pixel_off(buf, x, y) buf[(y)*12 + (x)/8] &= ~(0x80 >> ((x) & 0x07))
+#define pixel_test(buf, x, y) ((buf[(y)*12 + (x)/8] & (0x80 >> ((x) & 0x07))) != 0)
 
-void move_snake() {
+bool move_snake() {
     int16_t volatile head, tail;
     head = snake_body_offset + 2;
     if (head >= SNAKE_BUFFER_SIZE)
@@ -57,10 +58,13 @@ void move_snake() {
     snake_body[head] = snake_head_x;
     snake_body[head + 1] = snake_head_y;
     snake_body_offset = head;
-    pixel_on(plotSScreen, snake_body[head], snake_body[head + 1]);
+    if (pixel_test(plotSScreen, snake_head_x, snake_head_y))
+        return false;
+    pixel_on(plotSScreen, snake_head_x, snake_head_y);
     if (snake_body[tail] != 255)
         pixel_off(plotSScreen, snake_body[tail], snake_body[tail + 1]);
     FastCopy();
+    return true;
 }
 
 int main() {
@@ -73,23 +77,30 @@ int main() {
     direction = left;
     CClrLCDFull();
     CDrawRectBorderClearFull();
+    CRunIndicatorOff();
     key = 0;
     while (key != skClear)
     {
-        move_snake();
+        if (!move_snake())
+            break;
         key = CGetCSC();
         switch (key)
         {
         case skUp:
-            direction = up; break;
+            if (direction != down) direction = up;
+            break;
         case skDown:
-            direction = down; break;
+            if (direction != up) direction = down;
+            break;
         case skLeft:
-            direction = left; break;
+            if (direction != right) direction = left;
+            break;
         case skRight:
-            direction = right; break;
+            if (direction != left) direction = right;
+            break;
         }
     }
     CClrLCDFull();
+    CRunIndicatorOn();
     return 0;
 }
