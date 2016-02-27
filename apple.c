@@ -1,8 +1,9 @@
 #include <string.h>
 #include "c_ti83p.h"
+#include "draw.h"
 #include "apple.h"
 
-#define MAX_APPLES 4
+#define MAX_APPLES 20
 #define APPLE_BUFFER_SIZE (MAX_APPLES * 2)
 
 // on-screen apple positions (0 = invalid)
@@ -39,14 +40,21 @@ bool apple_exists (uint8_t x, uint8_t y) {
     return false;
 }
 
-void apple_remove (uint8_t x, uint8_t y) {
+bool apple_remove (uint8_t x, uint8_t y) {
     int i;
     for (i = 0; i < APPLE_BUFFER_SIZE; i += 2) {
         if (apples[i] == x && apples[i + 1] == y) {
             apples[i] = 0;
             apples[i + 1] = 0;
             --apple_count;
-            return;
+            return true;
         }
     }
+    return false;
+}
+
+void apple_draw_all (uint8_t *buffer) {
+    int i;
+    for (i = 0; i < APPLE_BUFFER_SIZE; i += 2)
+        pixel_on(buffer, apples[i], apples[i + 1]);
 }

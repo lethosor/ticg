@@ -10,8 +10,9 @@
 #define DIMX 96
 #define DIMY 64
 
-#define SNAKE_BUFFER_SIZE 200
-__at 0x9872 uint8_t snake_body[BUFFER_SIZE];
+#define SNAKE_BUFFER_SIZE BUFFER_SIZE
+#define MAX_SNAKE_SIZE ((SNAKE_BUFFER_SIZE - 1) / 2)
+__at 0x9872 uint8_t snake_body[SNAKE_BUFFER_SIZE];
 uint16_t snake_size;
 uint16_t snake_body_offset; // 0 to (SNAKE_BUFFER_SIZE - 1)
 uint8_t snake_head_x;
@@ -19,14 +20,12 @@ uint8_t snake_head_y;
 
 // number of ticks until next apple appears, if possible
 uint8_t apple_next_delay;
-#define apple_next_delay_default (snake_size + 5)
+#define apple_next_delay_default (10)
 
-enum Direction { up, down, left, right };
-int8_t direction;
-
-#define pixel_on(buf, x, y) buf[(y)*12 + (x)/8] |= (0x80 >> ((x) & 0x07))
-#define pixel_off(buf, x, y) buf[(y)*12 + (x)/8] &= ~(0x80 >> ((x) & 0x07))
-#define pixel_test(buf, x, y) ((buf[(y)*12 + (x)/8] & (0x80 >> ((x) & 0x07))))
+enum Direction { UP, DOWN, LEFT, RIGHT };
+uint8_t direction;
+enum State { PLAYING, WON, LOST };
+uint8_t state;
 
 void sleep(int ticks) {
     int i;
@@ -41,6 +40,10 @@ bool move_snake() {
     // indexes of head and tail coordinates in snake_body
     int16_t volatile head, tail;
     uint8_t tail_x, tail_y;
+    if (snake_size == MAX_SNAKE_SIZE) {
+        state = WON;
+        return false;
+    }
     head = snake_body_offset + 2;
     if (head >= SNAKE_BUFFER_SIZE)
         head = 0;
@@ -48,22 +51,22 @@ bool move_snake() {
     if (tail < 0)
         tail += SNAKE_BUFFER_SIZE;
     switch (direction) {
-    case up:
+    case UP:
         snake_head_y--;
         if (snake_head_y == 255)
             snake_head_y = DIMY - 1;
         break;
-    case down:
+    case DOWN:
         snake_head_y++;
         if (snake_head_y >= DIMY)
             snake_head_y = 0;
         break;
-    case left:
+    case LEFT:
         snake_head_x--;
         if (snake_head_x == 255)
             snake_head_x = DIMX - 1;
         break;
-    case right:
+    case RIGHT:
         snake_head_x++;
         if (snake_head_x >= DIMX)
             snake_head_x = 0;
@@ -73,32 +76,23 @@ bool move_snake() {
     snake_body[head + 1] = snake_head_y;
     snake_body_offset = head;
     if (pixel_test(plotSScreen, snake_head_x, snake_head_y)) {
-        if (apple_exists(snake_head_x, snake_head_y)) {
-            apple_remove(snake_head_x, snake_head_y);
-            snake_size++;
-        }
-        else
+        if (apple_remove(snake_head_x, snake_head_y))
+            ++snake_size;
+        else {
+            state = LOST;
             return false;
+        }
     }
     pixel_on(plotSScreen, snake_head_x, snake_head_y);
     --apple_next_delay;
     tail_x = snake_body[tail];
     tail_y = snake_body[tail + 1];
     if (tail_x != 255) {
-        // if creating an apple is possible, register one and leave this pixel behind on-screen
-        // otherwise, clear this pixel
-        if (apple_next_delay == 0 && apple_add(tail_x, tail_y))
-            apple_next_delay = apple_next_delay_default;
-        else
-        {
-            // don't erase an apple created here at the last tick
-            if (!apple_exists(tail_x, tail_y))
-                pixel_off(plotSScreen, tail_x, tail_y);
-            // if adding an apple failed, add one at the next possible tick
-            if (apple_next_delay == 0)
-                apple_next_delay = 1;
-        }
+        if (apple_next_delay == 0)
+            apple_next_delay = apple_add(tail_x, tail_y) ? apple_next_delay_default : 1;
+        pixel_off(plotSScreen, tail_x, tail_y);
     }
+    apple_draw_all(plotSScreen);
     FastCopy();
     return true;
 }
@@ -112,7 +106,8 @@ int main() {
     snake_head_y = DIMY / 2;
     apple_init();
     apple_next_delay = apple_next_delay_default;
-    direction = left;
+    direction = LEFT;
+    state = PLAYING;
     CClrLCDFull();
     CDrawRectBorderClearFull();
     CRunIndicatorOff();
@@ -125,27 +120,28 @@ int main() {
         switch (key)
         {
         case skUp:
-            if (direction != down) direction = up;
+            if (direction != DOWN) direction = UP;
             break;
         case skDown:
-            if (direction != up) direction = down;
+            if (direction != UP) direction = DOWN;
             break;
         case skLeft:
-            if (direction != right) direction = left;
+            if (direction != RIGHT) direction = LEFT;
             break;
         case skRight:
-            if (direction != left) direction = right;
+            if (direction != LEFT) direction = RIGHT;
             break;
         }
-        sleep(3000);
+        sleep(2000);
     }
-    penRow = 28;
-    penCol = 25;
+    penRow = 0;
+    penCol = 1;
     CTextInvertOn();
-    CVPutS("Game over!");
+    CVPutS((state == WON) ? "You WIN!" : "Game over!");
     CTextInvertOff();
     CGetKey();
     CClrLCDFull();
+    memset(plotSScreen, 0, BUFFER_SIZE);
     CRunIndicatorOn();
     return 0;
 }
