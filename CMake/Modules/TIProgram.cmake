@@ -12,7 +12,7 @@ find_package(PythonInterp REQUIRED)
 
 function(ti_program target calcname)
     set(c_ti83p ${CMAKE_SOURCE_DIR}/c_ti83p)
-    add_executable(${target} ${c_ti83p}/tios_crt0.s ${c_ti83p}/ti83plus.asm ${ARGN})
+    add_executable(${target} ${c_ti83p}/src/tios_crt0.s ${c_ti83p}/src/ti83plus.asm ${ARGN})
     target_include_directories(${target} PUBLIC ${c_ti83p})
     add_custom_command(TARGET ${target} POST_BUILD
         COMMAND sdobjcopy -Iihex -Obinary ${target}.ihx ${target}.bin
