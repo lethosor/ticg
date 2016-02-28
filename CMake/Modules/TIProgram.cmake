@@ -9,17 +9,13 @@ set(CMAKE_ASM_FLAGS "-p -g")
 set(CMAKE_EXE_LINKER_FLAGS "--code-loc 0x9D9B --data-loc 0 --no-std-crt0")
 
 find_package(PythonInterp REQUIRED)
-find_program(HEX2BIN hex2bin hex2bin.exe)
-if("${HEX2BIN}" STREQUAL "HEX2BIN-NOTFOUND")
-    message(FATAL_ERROR "Could not locate hex2bin")
-endif()
 
 function(ti_program target calcname)
     set(c_ti83p ${CMAKE_SOURCE_DIR}/c_ti83p)
     add_executable(${target} ${c_ti83p}/tios_crt0.s ${c_ti83p}/ti83plus.asm ${ARGN})
     target_include_directories(${target} PUBLIC ${c_ti83p})
     add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${HEX2BIN} -b ${target}.ihx
+        COMMAND sdobjcopy -Iihex -Obinary ${target}.ihx ${target}.bin
         COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/depends/binpac8x.py -O ${calcname} ${target}.bin ${target}.8xp
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Converting to binary"
