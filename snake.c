@@ -22,14 +22,15 @@ uint8_t snake_head_y;
 uint8_t apple_next_delay;
 #define apple_next_delay_default (10)
 
+uint16_t score;
+
 enum Direction { UP, DOWN, LEFT, RIGHT };
 uint8_t direction;
 enum State { PLAYING, WON, LOST };
 uint8_t state;
 
-void sleep(int ticks) {
-    int i;
-    for (i = 0; i < ticks; ++i) {
+void sleep(unsigned ticks) {
+    while (--ticks) {
         __asm
         nop
         __endasm;
@@ -53,31 +54,25 @@ bool move_snake() {
     switch (direction) {
     case UP:
         snake_head_y--;
-        if (snake_head_y == 255)
-            snake_head_y = DIMY - 1;
         break;
     case DOWN:
         snake_head_y++;
-        if (snake_head_y >= DIMY)
-            snake_head_y = 0;
         break;
     case LEFT:
         snake_head_x--;
-        if (snake_head_x == 255)
-            snake_head_x = DIMX - 1;
         break;
     case RIGHT:
         snake_head_x++;
-        if (snake_head_x >= DIMX)
-            snake_head_x = 0;
         break;
     }
     snake_body[head] = snake_head_x;
     snake_body[head + 1] = snake_head_y;
     snake_body_offset = head;
     if (pixel_test(plotSScreen, snake_head_x, snake_head_y)) {
-        if (apple_remove(snake_head_x, snake_head_y))
+        if (apple_remove(snake_head_x, snake_head_y)) {
             ++snake_size;
+            ++score;
+        }
         else {
             state = LOST;
             return false;
@@ -106,11 +101,14 @@ int main() {
     snake_head_y = DIMY / 2;
     apple_init();
     apple_next_delay = apple_next_delay_default;
+    score = 0;
     direction = LEFT;
     state = PLAYING;
+    CRunIndicatorOff();
     CClrLCDFull();
     CDrawRectBorderClearFull();
-    CRunIndicatorOff();
+    // Horizontal (DIMY - 8)
+    memset(plotSScreen + (12 * (DIMY - 8)), 255, 12);
     key = 0;
     while (key != skClear)
     {
@@ -132,9 +130,9 @@ int main() {
             if (direction != LEFT) direction = RIGHT;
             break;
         }
-        sleep(2000);
+        sleep(5000);
     }
-    penRow = 0;
+    penRow = DIMY - 7;
     penCol = 1;
     CTextInvertOn();
     CVPutS((state == WON) ? "You WIN!" : "Game over!");
