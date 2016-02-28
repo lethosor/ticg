@@ -37,13 +37,46 @@ void sleep(unsigned ticks) {
     }
 }
 
-bool move_snake() {
+uint16_t VPutUintRightBins[5];
+void VPutUintRight (uint16_t n) {
+    uint8_t i = 0, ch;
+    bool out = false;
+    if (!n) {
+        penCol += 16;
+        CVPutMap('0');
+        return;
+    }
+    for (; i < 5; ++i) {
+        ch = '0';
+        if (n < VPutUintRightBins[i]) {
+            if (out)
+                CVPutMap(ch);
+            else
+                penCol += 4;
+            continue;
+        }
+        do {
+            n -= VPutUintRightBins[i];
+            ++ch;
+        } while (n >= VPutUintRightBins[i]);
+        out = true;
+        CVPutMap(ch);
+    }
+}
+
+void draw_score() {
+    penCol = DIMX - 4*5 - 1;
+    penRow = DIMY - 8;
+    VPutUintRight(score);
+}
+
+void move_snake() {
     // indexes of head and tail coordinates in snake_body
     int16_t volatile head, tail;
     uint8_t tail_x, tail_y;
     if (snake_size == MAX_SNAKE_SIZE) {
         state = WON;
-        return false;
+        return;
     }
     head = snake_body_offset + 2;
     if (head >= SNAKE_BUFFER_SIZE)
@@ -72,10 +105,11 @@ bool move_snake() {
         if (apple_remove(snake_head_x, snake_head_y)) {
             ++snake_size;
             ++score;
+            draw_score();
         }
         else {
             state = LOST;
-            return false;
+            return;
         }
     }
     pixel_on(plotSScreen, snake_head_x, snake_head_y);
@@ -89,11 +123,16 @@ bool move_snake() {
     }
     apple_draw_all(plotSScreen);
     FastCopy();
-    return true;
 }
 
 int main() {
-    uint8_t key;
+    uint8_t key, i;
+    VPutUintRightBins[0]=10000;
+    VPutUintRightBins[1]=1000;
+    VPutUintRightBins[2]=100;
+    VPutUintRightBins[3]=10;
+    VPutUintRightBins[4]=1;
+
     memset(snake_body, 255, SNAKE_BUFFER_SIZE);
     snake_size = 5;
     snake_body_offset = snake_size * 2;
@@ -105,14 +144,17 @@ int main() {
     direction = LEFT;
     state = PLAYING;
     CRunIndicatorOff();
+    CTextWriteOn();
     CClrLCDFull();
     CDrawRectBorderClearFull();
-    // Horizontal (DIMY - 8)
-    memset(plotSScreen + (12 * (DIMY - 8)), 255, 12);
+    // Horizontal (DIMY - 9)
+    memset(plotSScreen + (12 * (DIMY - 9)), 255, 12);
+    draw_score();
     key = 0;
     while (key != skClear)
     {
-        if (!move_snake())
+        move_snake();
+        if (state != PLAYING)
             break;
         key = CGetCSC();
         switch (key)
@@ -132,14 +174,20 @@ int main() {
         }
         sleep(5000);
     }
-    penRow = DIMY - 7;
+    penRow = DIMY - 8;
     penCol = 1;
     CTextInvertOn();
+    // set textEraseBelow flag
+    __asm
+    set 1,5(iy)
+    __endasm;
     CVPutS((state == WON) ? "You WIN!" : "Game over!");
     CTextInvertOff();
+    FastCopy();
     CGetKey();
     CClrLCDFull();
     memset(plotSScreen, 0, BUFFER_SIZE);
+    CTextWriteOff();
     CRunIndicatorOn();
     return 0;
 }

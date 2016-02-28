@@ -26,3 +26,15 @@ _CDrawRectBorderClear::
 
 	pop ix
 	ret
+
+;; void CVPutMap(char c);
+_CVPutMap::
+	push	ix
+	ld	ix,#0
+	add	ix,sp
+
+	ld a,4(ix)
+	bcall _VPutMap
+
+	pop ix
+	ret
