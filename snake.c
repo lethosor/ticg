@@ -37,6 +37,12 @@ void sleep(unsigned ticks) {
     }
 }
 
+void idle() {
+    __asm
+    halt
+    __endasm;
+}
+
 uint16_t VPutUintRightBins[5];
 void VPutUintRight (uint16_t n) {
     uint8_t i = 0, ch;
@@ -126,7 +132,7 @@ void move_snake() {
 }
 
 int main() {
-    uint8_t key, i;
+    uint8_t key;
     VPutUintRightBins[0]=10000;
     VPutUintRightBins[1]=1000;
     VPutUintRightBins[2]=100;
@@ -170,6 +176,10 @@ int main() {
             break;
         case skRight:
             if (direction != LEFT) direction = RIGHT;
+            break;
+        case skEnter:
+            while (CGetKey() != kEnter)
+                idle();
             break;
         }
         sleep(5000);
