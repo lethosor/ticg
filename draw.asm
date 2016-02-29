@@ -7,7 +7,7 @@
 	.area _DATA
 
 .nlist
-.include "c_ti83p/ti83plus.inc"
+.include "c_ti83p/src/ti83plus.inc"
 .list
 
 	.area _CODE
